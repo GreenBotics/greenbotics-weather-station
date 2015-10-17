@@ -4,23 +4,25 @@
 
 #include "getUserInput.h"
 
-String content = "";
-String content2 = "";
-char character;
-  
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
 // Create aREST instance
 aREST rest = aREST();
-
+//BME280 instance 
+Adafruit_BME280 bme; // I2C
 
 // WiFi parameters
 bool wifiInitialized = false;
 bool wifiInitDone    = false;
 bool ssidInitialized = false;
 bool passwordInitialized = false;
-//const char* ssid = "";
+
 String ssid = "";
 String password = "";
-//const char* password = "";
+
 
 // The port to listen for incoming TCP connections 
 #define LISTEN_PORT           3020
@@ -29,20 +31,20 @@ String password = "";
 WiFiServer server(LISTEN_PORT);
 
 // Variables to be exposed to the API
-int temperature;
-int humidity;
-int pressure;
+float temperature;
+float humidity;
+float pressure;
 
 void setup(void)
 {  
-  pinMode(0, OUTPUT);
   // Start Serial
   Serial.begin(115200);
   
   // Init variables and expose them to REST API
-  temperature = 24;
-  humidity = 40;
-  pressure = 10;
+  temperature = 0;
+  humidity = 0;
+  pressure = 0;
+
   rest.variable("temperature",&temperature);
   rest.variable("humidity",&humidity);
   rest.variable("pressure",&pressure);
@@ -53,6 +55,13 @@ void setup(void)
   // Give name and ID to device
   rest.set_id("1");
   rest.set_name("esp8266");
+  
+  if (!bme.begin()) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1);
+    delay(1000);
+  }
+
 }
 
 void getWifiData(){
@@ -107,6 +116,8 @@ void handleRestCalls(){
   rest.handle(client);
 }
 
+
+//////////////////
 void loop() {
   getWifiData();
   if(wifiInitialized && ! wifiInitDone){
@@ -116,6 +127,11 @@ void loop() {
   if(wifiInitDone){
     handleRestCalls();
   }
+
+  //fetch sensor data
+  temperature = bme.readTemperature();
+  pressure    = bme.readPressure() / 100.0F;
+  humidity    = bme.readHumidity();
 }
 
 // Custom function accessible by the API
