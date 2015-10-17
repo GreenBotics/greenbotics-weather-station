@@ -17,8 +17,10 @@ bool wifiInitialized = false;
 bool wifiInitDone    = false;
 bool ssidInitialized = false;
 bool passwordInitialized = false;
-const char* ssid = "";
-const char* password = "";
+//const char* ssid = "";
+String ssid = "";
+String password = "";
+//const char* password = "";
 
 // The port to listen for incoming TCP connections 
 #define LISTEN_PORT           3020
@@ -29,6 +31,7 @@ WiFiServer server(LISTEN_PORT);
 // Variables to be exposed to the API
 int temperature;
 int humidity;
+int pressure;
 
 void setup(void)
 {  
@@ -39,8 +42,10 @@ void setup(void)
   // Init variables and expose them to REST API
   temperature = 24;
   humidity = 40;
+  pressure = 10;
   rest.variable("temperature",&temperature);
   rest.variable("humidity",&humidity);
+  rest.variable("pressure",&pressure);
 
   // Function to be exposed
   rest.function("led",ledControl);
@@ -52,37 +57,17 @@ void setup(void)
 
 void getWifiData(){
   //ask user for data 
-  while(Serial.available() && !ssidInitialized) {
-    character = Serial.read();
-    if(character == '\n'){
-      ssidInitialized = true;
-      ssid = content.c_str();
-      Serial.print("SSID:");
-      Serial.println(ssid);
-    }else{
-      content.concat(character);
-    }
-  }
+  ssid = getUserInput(ssidInitialized,"SSID");
+  
   if(ssidInitialized){
-    //content="";
-    while(Serial.available() && !passwordInitialized) {
-      character = Serial.read();
-      if(character == '\n'){
-        passwordInitialized=true;
-        password = content2.c_str();
-        Serial.print("Password:");
-        Serial.println(password);
-      }else{
-        content2.concat(character);
-      }
-    }
+    password = getUserInput(passwordInitialized,"password");
   }
   
   if(ssidInitialized && passwordInitialized && !wifiInitialized){
     Serial.print("Validated ssid: ");
-    Serial.println(ssid);
+    Serial.println(ssid.c_str());
     Serial.print("Pasword: ");
-    Serial.println(password);
+    Serial.println(password.c_str());
 
     wifiInitialized = true;
   }
@@ -91,7 +76,7 @@ void getWifiData(){
 
 void setupWifi(){
   // Connect to WiFi
-  WiFi.begin(ssid, password);
+  WiFi.begin(ssid.c_str(), password.c_str());
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
