@@ -1,3 +1,4 @@
+/*
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
@@ -10,12 +11,11 @@
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
-Adafruit_BME280 bme; // I2C
-//Adafruit_BME280 bme(BME_CS); // hardware SPI
-//Adafruit_BME280 bme(BME_CS, BME_MOSI, BME_MISO,  BME_SCK);
+Adafruit_BME280 bme; // I2C */
 
 
 struct RPMMeasurer {
+  int hallPin;
   int windRPM;
   int curState;
   int prevState;
@@ -31,26 +31,46 @@ struct RPMMeasurer {
   
     startTime = millis();
     currentTime = millis();
-    elapsedTime = 0;   
+    elapsedTime = 0; 
+
+    hallPin = -1;
+  }
+
+  RPMMeasurer(int hallPin){
+    windRPM = 0;
+    curState = 0;
+    prevState= 0;
+  
+    startTime = millis();
+    currentTime = millis();
+    elapsedTime = 0; 
+
+    hallPin = hallPin;
+    setup();
+  }
+
+  void setup(){
+    pinMode(hallPin, INPUT);
   }
   
-  int measure(int state) 
+  int measure() 
   { 
-    curState = state;
+    
+    curState = digitalRead(hallPin);
     int time_between_pulses = 10;
     int pulses_per_rev = 1;
     
     if(curState != prevState){
       currentTime = millis();
       elapsedTime = currentTime - startTime;
-      windRPM =  60000/(time_between_pulses*pulses_per_rev);
+      windRPM = 60000/(elapsedTime*pulses_per_rev);
 
       //reset
-      prevState = state;
+      prevState = curState;
       startTime = millis();
       currentTime = millis();
       
-      return windRPM;
+      return curState;
     }
   }
 };
