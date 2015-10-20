@@ -50,6 +50,7 @@ int hallPin = 2;
 float windRPM;
 int curState = 1;
 int prevState = 1;
+int rInCycle = 1;
 
 unsigned long startTime;
 unsigned long currentTime;
@@ -60,8 +61,10 @@ void setup(void)
   // Start Serial
   Serial.begin(115200);
 
+  Wire.pins(13,14);
+
   //windRpm = RPMMeasurer(2);
-  pinMode(hallPin, INPUT);
+  //pinMode(hallPin, INPUT);
   
   // Init variables and expose them to REST API
   temperature = 0;
@@ -93,19 +96,19 @@ void setup(void)
 
   while( !bme.begin() ) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    delay(1000);
+    myDelay(1000);
   }
 
   while( !uv.begin() ) {
     Serial.println("Didn't find Si1145");
-    delay(1000);
+    myDelay(1000);
   }
 
 }
 
 void getWifiData(){
   //ask user for data 
-  ssid = getUserInput(ssidInitialized,"SSID");
+  /*ssid = getUserInput(ssidInitialized,"SSID");
   
   if(ssidInitialized){
     password = getUserInput(passwordInitialized,"password");
@@ -118,18 +121,20 @@ void getWifiData(){
     Serial.println(password.c_str());
 
     wifiInitialized = true;
-  }
+  }*/
+
+  wifiInitialized = true;
 
 }
 
 void setupWifi(){
   // Connect to WiFi
-  WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin("o2-WLAN62","8P46BC9L66U366Q7" );//ssid.c_str(), password.c_str());
   //set static ip part
-  //WiFi.config(IPAddress(192,168,1,20), IPAddress(192,168,1,1), IPAddress(255,255,255,0));
+  WiFi.config(IPAddress(192,168,1,20), IPAddress(192,168,1,1), IPAddress(255,255,255,0));
   
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    myDelay(500);
     Serial.print(".");
   }
   Serial.println("");
@@ -153,7 +158,7 @@ void handleRestCalls(){
     return;
   }
   while(!client.available()){
-    delay(1);
+    myDelay(1);
   }
   rest.handle(client);
 }
@@ -161,6 +166,7 @@ void handleRestCalls(){
 
 //////////////////
 void loop() {
+  myDelay(1);
   getWifiData();
   if(wifiInitialized && ! wifiInitDone){
     setupWifi();
@@ -175,12 +181,12 @@ void loop() {
   pressure    = bme.readPressure() / 100.0F;
   humidity    = bme.readHumidity();
 
-  //windSpd     = measureRpm(); //digitalRead(hallPin);//windRpm.measure();
-  measureRpm();
-
   visL        = uv.readVisible();
   UVL         = uv.readIR();
   irL         = uv.readUV();
+
+  //windSpd     = measureRpm(); //digitalRead(hallPin);//windRpm.measure();
+  //measureRpm();
 
 }
 
@@ -198,40 +204,69 @@ int ledControl(String command) {
 }
 
 
+float measureRpm2() 
+{ 
+  curState = digitalRead(hallPin);
+  
+  if(curState == 0 && prevState != curState){
+    Serial.println("State change");
+    rInCycle++;
+  }
+  prevState = curState;
+  
+  currentTime = millis();
+  elapsedTime = currentTime - startTime;
+  if(elapsedTime >= 60000){
+    float rpm = rInCycle;
+    //reset
+    startTime = millis();
+    prevState = curState;
+    rInCycle = 0; 
+
+    windSpd = rpm;
+  }//one minute has elapsed 
+  
+}
+
 float measureRpm() 
 { 
   
   curState = digitalRead(hallPin);
   int pulses_per_rev = 1;
+
+  currentTime = millis();
+  elapsedTime = currentTime - startTime;
    
   if(curState == 0 && prevState != curState){
-    currentTime = millis();
-    elapsedTime = currentTime - startTime;
-    //Serial.print("ElapsedTime");
-    //Serial.println(elapsedTime);
-    //Serial.print("curState");
-    //Serial.println(curState);
     
     float rpm = 60000/(elapsedTime*pulses_per_rev);
-    //Serial.print("windRPM");
-    //Serial.println(windRPM);
 
     //reset
     startTime = millis();
     prevState = curState;
     if(rpm != windRPM)
     {
-      Serial.print("windRPM");
-      Serial.println(windRPM); 
-      windRPM = rpm;
       windSpd = rpm;
+      windRPM = rpm;
     }
-    //return rpm;
-  }else{
-    //Serial.print("curState");
-    //Serial.println(curState);
-    prevState = curState;
+  }
+  else if(elapsedTime >= 60000){//more than a minute without activity, reset
+    windSpd = 0;
   }
   
-  //delay(1000);
+  prevState = curState;
+
 }
+
+
+void myDelay(int ms) {
+    int i;
+    for(i=1;i!=ms;i++) {
+          delay(1);
+          if(i%100 == 0) {
+                  ESP.wdtFeed(); 
+                  yield();
+          }
+    }
+}
+
