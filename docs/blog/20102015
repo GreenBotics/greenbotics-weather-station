@@ -1,0 +1,47 @@
+20/10/2015
+==========
+
+Hardware:
+---------
+
+Managed to get Olimex MOD-WIFI-ESP8266 working!
+
+
+Things were not as trivial as hoped initially :
+ * unlike what the official document says , it is possible to reflash the firmware
+ by setting pins 21 LOW and pulsing pin 13 LOW , (or more simply, add two buttons to do it )
+ * for some reason, I fried my first FTDI programmer (FTDI basic) on the first try 
+ * I'll try and add a wiring schematic here
+
+ Another few things worth noting:
+  * the board seems to be much more stable then the Adafruit Huzzah (no weird resets/continuous reboots)
+  * so stable in fact that it has been running almost non stop since without much of a hiccup
+  * the 3.3v power is supplied by an older Arduino Due and seems fine for my use case
+
+Software:
+---------
+
+More progress on the Cycle.js based UI (still need to regroup all of it here)
+ * solved issues with Graphing
+ * better data handling
+
+
+Infrastructure and decisions
+----------------------------
+
+Storage:
+--------
+
+Not sure how to deal with data storage just yet .
+Garden weather station would be maximum 10 -15 meters from indoors (and router)...So a fully autonomous station 
+might not be needed
+
+Here are a few options 
+* sd card directly with the weather station: "simple", perhaps lower power
+* raspberry-pi (or similar) acting as a "central hub": this would make it easier to handle multiple "sensor nodes"
+(minimal indoor temperature & humidity sensing). This does not entirely solve the storage question, but there are more possibilities.
+
+Power:
+------
+
+Needs to be solar for the outside weather station (not quite enough wind in the area), want to avoid complex wiring from within the house.
