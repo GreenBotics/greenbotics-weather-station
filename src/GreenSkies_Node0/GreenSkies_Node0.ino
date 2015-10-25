@@ -8,6 +8,7 @@
 #include <Adafruit_BME280.h>
 #include <Adafruit_SI1145.h>
 
+#include "configuration.h"
 #include "getUserInput.h"
 #include "sensors.h"
 
@@ -19,17 +20,10 @@ Adafruit_SI1145 uv = Adafruit_SI1145();//I2C too
 //RPMMeasurer windRpm;
 
 // WiFi parameters
-bool wifiInitialized = false;
+bool wifiInitStarted = true;
 bool wifiInitDone    = false;
 bool ssidInitialized = false;
 bool passwordInitialized = false;
-
-String ssid = "";
-String password = "";
-
-
-// The port to listen for incoming TCP connections 
-#define LISTEN_PORT           3020
 
 // Create an instance of the server
 WiFiServer server(LISTEN_PORT);
@@ -45,8 +39,8 @@ float visL;
 float irL;
 float UVL; 
 
-///
-int hallPin = 2;
+///for wind speed
+int hallPin = 12;
 float windRPM;
 int curState = 1;
 int prevState = 1;
@@ -60,11 +54,11 @@ void setup(void)
 {  
   // Start Serial
   Serial.begin(115200);
-
+  //configure I2C
   Wire.pins(13,14);
 
-  //windRpm = RPMMeasurer(2);
-  //pinMode(hallPin, INPUT);
+
+  pinMode(hallPin, INPUT);
   
   // Init variables and expose them to REST API
   temperature = 0;
@@ -86,13 +80,10 @@ void setup(void)
   rest.variable("visL",&visL);
   rest.variable("irL",&irL);
   rest.variable("UVL",&UVL);
-
-  // Function to be exposed
-  rest.function("led",ledControl);
   
   // Give name and ID to device
-  rest.set_id("1");
-  rest.set_name("GreenSkiesWeatherStation");
+  rest.set_id("0");
+  rest.set_name("GreenSkies_Node0");
 
   while( !bme.begin() ) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
@@ -106,32 +97,13 @@ void setup(void)
 
 }
 
-void getWifiData(){
-  //ask user for data 
-  /*ssid = getUserInput(ssidInitialized,"SSID");
-  
-  if(ssidInitialized){
-    password = getUserInput(passwordInitialized,"password");
-  }
-  
-  if(ssidInitialized && passwordInitialized && !wifiInitialized){
-    Serial.print("Validated ssid: ");
-    Serial.println(ssid.c_str());
-    Serial.print("Pasword: ");
-    Serial.println(password.c_str());
 
-    wifiInitialized = true;
-  }*/
-
-  wifiInitialized = true;
-
-}
 
 void setupWifi(){
   // Connect to WiFi
-  WiFi.begin("o2-WLAN62","8P46BC9L66U366Q7" );//ssid.c_str(), password.c_str());
+  WiFi.begin( ssid, password );
   //set static ip part
-  WiFi.config(IPAddress(192,168,1,20), IPAddress(192,168,1,1), IPAddress(255,255,255,0));
+  WiFi.config(ip, gateway, subnet);
   
   while (WiFi.status() != WL_CONNECTED) {
     myDelay(500);
@@ -167,8 +139,7 @@ void handleRestCalls(){
 //////////////////
 void loop() {
   myDelay(1);
-  getWifiData();
-  if(wifiInitialized && ! wifiInitDone){
+  if(wifiInitStarted && ! wifiInitDone){
     setupWifi();
     wifiInitDone = true;
   }
@@ -185,47 +156,8 @@ void loop() {
   UVL         = uv.readIR();
   irL         = uv.readUV();
 
-  //windSpd     = measureRpm(); //digitalRead(hallPin);//windRpm.measure();
-  //measureRpm();
-
-}
-
-// Custom function accessible by the API
-int ledControl(String command) {
-  
-  // Get state from command
-  int state = command.toInt();
-
-  Serial.print("sent command to led: ");
-  Serial.println(state);
-  
-  digitalWrite(0,state);
-  return 1;
-}
-
-
-float measureRpm2() 
-{ 
-  curState = digitalRead(hallPin);
-  
-  if(curState == 0 && prevState != curState){
-    Serial.println("State change");
-    rInCycle++;
-  }
-  prevState = curState;
-  
-  currentTime = millis();
-  elapsedTime = currentTime - startTime;
-  if(elapsedTime >= 60000){
-    float rpm = rInCycle;
-    //reset
-    startTime = millis();
-    prevState = curState;
-    rInCycle = 0; 
-
-    windSpd = rpm;
-  }//one minute has elapsed 
-  
+  //windSpd     = measureRpm();
+  measureRpm();
 }
 
 float measureRpm() 
@@ -244,15 +176,17 @@ float measureRpm()
     //reset
     startTime = millis();
     prevState = curState;
-    if(rpm != windRPM)
-    {
+    //if(rpm != windRPM)
+    //{
       windSpd = rpm;
       windRPM = rpm;
-    }
+    //}
+    //Serial.print("windSpd");
+    //Serial.println(rpm);
   }
-  else if(elapsedTime >= 60000){//more than a minute without activity, reset
+  /*else if(elapsedTime >= 60000){//more than a minute without activity, reset
     windSpd = 0;
-  }
+  }*/
   
   prevState = curState;
 
