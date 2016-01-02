@@ -13,7 +13,8 @@
     "babel-core": "^6.2.1",
     "babel-preset-es2015": "^6.1.18",
     "babelify": "^7.2.0",
-    "node-watch": "^0.3.5"
+    "node-watch": "^0.3.5",
+    "watchify": "^3.6.1"
   },
   "scripts": {
     "mocha": "mocha test --compilers js:babel-core/register",
@@ -21,11 +22,11 @@
     "release": "npm run release-patch",
     "watch": "node build-helper.js & babel cad/src/*.es6 --watch --out-dir . ",
     "browserify": "browserify cad/src/index.jscad.es6 -t babelify --o cad/out/index.jscad.js --s main",
+    "watch":  "watchify cad/src/index.jscad.es6  -t babelify --s main --o cad/out/index.jscad.js -v -d",
     "compile-lib": "babel -d cad/out/ cad/src/",
-    "babel-stuff":"babel cad/src/index.jscad --out-file cad/out/index2.jscad",
+    "babel-stuff": "babel cad/src/index.jscad --out-file cad/out/index2.jscad",
     "release-patch": "git checkout master ; npm version patch && git push origin master --tags ",
     "release-minor": "git checkout master ; npm version patch && git push origin master --tags ",
     "release-major": "git checkout master ; npm version patch && git push origin master --tags "
   }
- 
 }
