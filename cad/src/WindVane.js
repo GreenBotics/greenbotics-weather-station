@@ -1,5 +1,5 @@
 import {of, head, flatten} from 'ramda'
-import {applyDefaults} from './utils'
+import {makeParams} from './utils'
 import {makeWraps} from './wrappers'
 
 
@@ -34,19 +34,9 @@ export default function WindVane(options){
   
   function addComputedParams(options){
     let bodyLength = options.l - options.headLength
-    let computed = {bodyLength}
-    options = Object.assign({}, options, computed)
-    return options
+    let computed   = {bodyLength}
+    return computed
   }
-
-  function validateParams(options){
-    return options
-  }
-
-  options =  of(options || {})//options
-    .map( o => applyDefaults(o, DEFAULTS) )
-    .map(addComputedParams)
-    .map( validateParams )
 
   //get our resulting params
   let {l,w,h, 
@@ -54,7 +44,7 @@ export default function WindVane(options){
     axisDiaID, axisDiaOD, axisHeight, 
     headWidth, headLength,
     tailWidth, tailLength, tailThickness
-  } = head(options) // FIXME HACK ?
+  } =  makeParams(options, DEFAULTS, addComputedParams)
 
   //////////////////
   //parts
@@ -81,13 +71,12 @@ export default function WindVane(options){
     .map( translate([headLength/2,headWidth/2,0]) )//bottom cut
 
   const mountHole = cylinder({h:axisDiaOD,d:axisDiaID})//center cut 
-    .map( e => rotate([90,0,0], e) )
+    .map( rotate( [90,0,0] ) )
 
   const result = union( body, arrowHead, center, tail )
     .map( result => difference( result ,cutoff ,mountHole ) )
     .map( rotate( [-90,0,0] ) )
 
   return flatten( result )
-  
   
 }

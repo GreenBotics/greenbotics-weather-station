@@ -1,5 +1,5 @@
 import {of, head, flatten, pipe} from 'ramda'
-import {applyDefaults} from './utils'
+import {makeParams} from './utils'
 import {makeWraps} from './wrappers'
 
 
@@ -19,16 +19,10 @@ function Cup(options){
 
   function addComputedParams(options){
     const id = options.od - options.walls
-    let computed = {id}
-    options = Object.assign({}, options, computed)
-    return options
+    return {id}
   }
 
-  options =  of(options || {})
-    .map( o => applyDefaults(o, DEFAULTS) )
-    .map( addComputedParams )
-
-  const {od, id, walls, shape, fn} = head(options)
+  const {od, id, walls, shape, fn} = makeParams(options, DEFAULTS, addComputedParams)
 
 
   if(shape === "sphere"){
@@ -63,11 +57,6 @@ export default function Anemometer(options){
     ,axisDia:8,axisHeight:12,axisOd:35
   }
 
-  options =  of(options || {})
-    .map( o => applyDefaults(o, DEFAULTS) )
-    .map( addComputedParams )
-    //.map( validateParams )
-
   function addComputedParams(options){
     let computed = {}
     options = Object.assign({}, options, computed)
@@ -78,7 +67,7 @@ export default function Anemometer(options){
     cupCount, cupOffset, cupOd, cupWalls
     ,armWidth
     ,axisDia, axisHeight, axisOd
-    } = head(options)
+    } = makeParams(options, DEFAULTS, addComputedParams)
 
   const cups = Array(cupCount).fill(0)
     .map(e=>Cup({od:cupOd, walls:cupWalls, shape:"sphere"}))

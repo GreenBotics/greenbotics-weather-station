@@ -1,5 +1,5 @@
 import {of, head, flatten} from 'ramda'
-import {applyDefaults} from './utils'
+import {makeParams} from './utils'
 import {makeWraps} from './wrappers'
 
 
@@ -24,27 +24,18 @@ export default function RainBucket(options){
     ,bottomOffset:10
   }
 
-  options =  of(options || {})
-    .map( o => applyDefaults(o, DEFAULTS) )
-    .map( addComputedParams )
-    //.map( validateParams )
-
   function addComputedParams(options){
     const id           = options.od - options.walls
     const funelEndDia = options.outputDia + options.funelWalls
-
-    let computed = {id, funelEndDia}
-    options = Object.assign({}, options, computed)
-    return options
+    return {id, funelEndDia}
   }
-
 
   const {
     od, id, h, walls
     ,bottomOffset
     ,outputDia
     ,funelEndDia, funelWalls
-    ,mountHolesDia, fn} = head(options)
+    ,mountHolesDia, fn} = makeParams(options, DEFAULTS, addComputedParams)
 
   //funnel
   const funnelInner = cylinder({h:h ,d2:od, d1:funelEndDia, fn })
