@@ -58,8 +58,9 @@ export default function Anemometer(options){
     translate, rotate, mirror} = makeWraps()//hack for now, this NEEDS to be done in the context of this function , otherwise the origin "sphere, cylinder etc are not defined"
 
   const DEFAULTS = {
-    cupCount:3,cupOffset:50,cupOd:50,cupWalls:3
-    ,axisDia:8,axisHeight:8,axisOd:12
+    cupCount:3,cupOffset:50,cupOd:50,cupWalls:4
+    ,armWidth:10
+    ,axisDia:8,axisHeight:12,axisOd:35
   }
 
   options =  of(options || {})
@@ -75,14 +76,15 @@ export default function Anemometer(options){
 
   const {
     cupCount, cupOffset, cupOd, cupWalls
+    ,armWidth
     ,axisDia, axisHeight, axisOd
     } = head(options)
 
   const cups = Array(cupCount).fill(0)
     .map(e=>Cup({od:cupOd, walls:cupWalls, shape:"sphere"}))
     //.map(mirror([1,0,0]))
-    .map(rotate([0,0,60]))
-    .map(translate([cupOffset,0,0]))
+    .map(rotate([0,0,90]))
+    .map(translate([cupOffset,armWidth/2,axisHeight/2]))
     .map((cup,index)=>rotate([0,0,(360/cupCount)*index],cup))
 
   //alternative approach
@@ -97,8 +99,12 @@ export default function Anemometer(options){
 
   const axisHole  = cylinder({d:axisDia,h:axisHeight})
   const axisBlock = //chain_hull(
-    cylinder({d:axisOd,h:axisHeight})
-    //)
+    union(
+      Array(cupCount).fill(0)
+        .map(e=>cube({size:[cupOffset - cupOd/2,armWidth,axisHeight],center:[false,true,false]}))
+        .map((axis,index)=>rotate([0,0,(360/cupCount)*index],axis))
+      ,cylinder({d:axisOd,h:axisHeight})
+    )
 
  
   const result = difference( union( cups, axisBlock )
