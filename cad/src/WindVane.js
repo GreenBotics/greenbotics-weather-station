@@ -5,12 +5,10 @@ import {makeWraps} from './wrappers'
 
 export default function WindVane(options){
   const {
-    sphere, cylinder, 
+    cube, sphere, cylinder, 
     square, circle, 
-    hull, 
-    union,
-    difference} = makeWraps()//hack for now, this NEEDS to be done in the context of this function , otherwise the origin "sphere, cylinder etc are not defined"
-
+    hull, chain_hull, union, difference, 
+    translate, rotate, mirror} = makeWraps()//hack for now, this NEEDS to be done in the context of this function , otherwise the origin "sphere, cylinder etc are not defined"
 
   const DEFAULTS = {
     l: 120//length
@@ -56,38 +54,40 @@ export default function WindVane(options){
     axisDiaID, axisDiaOD, axisHeight, 
     headWidth, headLength,
     tailWidth, tailLength, tailThickness
-  } = head(options) // FIXME HACK
+  } = head(options) // FIXME HACK ?
 
   //////////////////
   //parts
  
-  let center = sphere({r:axisDiaOD/2}) //not dia support for sphere?
+  const center = sphere({r:axisDiaOD/2}) //not dia support for sphere?
 
   const arrowHead = cylinder({h:headLength,d1:headWidth,d2:0,fn:4})
-    .map( h => rotate( [0, 90, 0], h ) )
-    .map( h => translate([bodyLength/2  ,0,0], h) )
+    .map( rotate( [0, 90, 0] ) )
+    .map( translate([bodyLength/2  ,0,0]) )
   
   const body = cylinder({h:bodyLength ,d:bodyDia, center:true })
-    .map( b => rotate( [0, 90, 0], b ) )
+    .map( rotate( [0, 90, 0] ) )
 
-  let tail = hull( 
+  const tail = hull( 
       square({size:[tailWidth,2]}) 
       , translate( [0,-tailWidth], circle({r:5}) )
       , translate( [-2,-tailLength], circle({r:0.4}) )
     ) 
     .map( t => linear_extrude({ height: tailThickness }, t) )
-    .map( t => translate([-bodyLength/2, -bodyDia/2 , - tailThickness/2],t) )
+    .map( translate([-bodyLength/2, -bodyDia/2 , - tailThickness/2]) )
 
   //holes
-  let cutoff = cube({size:[l,headWidth,20],center:true})
-    .translate([headLength/2,headWidth/2,0])//bottom cut
+  const cutoff = cube({size:[l,headWidth,20],center:true})
+    .map( translate([headLength/2,headWidth/2,0]) )//bottom cut
 
-  let mountHole = cylinder({h:axisDiaOD,d:axisDiaID})//center cut 
-    .map(e => rotate([90,0,0], e) )
+  const mountHole = cylinder({h:axisDiaOD,d:axisDiaID})//center cut 
+    .map( e => rotate([90,0,0], e) )
 
-  let result = union( body, arrowHead, center, tail )
+  const result = union( body, arrowHead, center, tail )
+    .map( result => difference( result ,cutoff ,mountHole ) )
+    .map( rotate( [-90,0,0] ) )
 
-  return difference( result ,cutoff ,mountHole )
-    .map(e =>rotate( [-90,0,0], e) )
+  return flatten( result )
+  
   
 }
