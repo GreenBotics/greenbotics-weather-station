@@ -40,8 +40,6 @@ function Cup(options){
     )
 
   }
- 
-
 }
 
 export default function Anemometer(options){
@@ -81,7 +79,7 @@ export default function Anemometer(options){
       Cup
       ,rotate([0,0,60])
       ,translate([cupOffset,0,0])
-      //,(cup,index)=>rotate([0,0,(360/cupCount)*index],cup)
+      ,(cup,index)=>rotate([0,0,(360/cupCount)*index],cup)
     )
   const cups2 = cupTransforms( Array(cupCount).fill(0) )
   console.log("cups2", cupTransforms,cups2)*/

@@ -48,7 +48,6 @@ export default function WindVane(options){
 
   //////////////////
   //parts
- 
   const center = sphere({r:axisDiaOD/2}) //not dia support for sphere?
 
   const arrowHead = cylinder({h:headLength,d1:headWidth,d2:0,fn:4})

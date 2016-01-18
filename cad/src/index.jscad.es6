@@ -8,6 +8,9 @@ import {of, head, flatten} from 'ramda'
 
 import WindVane from './WindVane'
 import RainBucket from './RainBucket'
+import Anemometer from './Anemometer'
+import StephensonScreen from './StephensonScreen'
+import doorHolder from './SlidingDoor/doorHolder'
 
 //from http://stackoverflow.com/questions/27266550/how-to-flatten-nested-array-in-javascript
 //temporary replacement for most/ramda "flatten" until we solve the import issues
@@ -53,17 +56,22 @@ import RainBucket from './RainBucket'
 ///////////////////////////////
 
 
-
-
-
-
 function main() {
   let res = 50
 
-  let arrow   = WindVane()
-  let rainBucket = RainBucket()
+  //let windVane   = WindVane()
+  //let rainBucket = RainBucket()
+  //let anemometer = Anemometer()
+  //let stephensonScreen = StephensonScreen()
 
-  return arrow
+  let doorHolder1 = doorHolder()
+
+  //return anemometer
+  //return rainBucket
+  //return windVane
+  //return stephensonScreen
+
+  return doorHolder1
 }
 
 if(typeof module !== 'undefined'){
