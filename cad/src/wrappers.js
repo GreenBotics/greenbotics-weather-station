@@ -26,6 +26,9 @@ function spreadWrap(type){
   }
 }
 
+
+
+
 export function makeWraps(){
   let _oldCube  = cube
   cube   = wrap(_oldCube)
@@ -35,6 +38,26 @@ export function makeWraps(){
 
   let _oldCylinder = cylinder
   cylinder = wrap(_oldCylinder)
+
+
+  //needs to be specifically overloaded (for now)
+  function torus(p) {
+    var ri = 1, ro = 4, fni = 16, fno = 32, roti = 0;
+    if(p) {
+      if(p.ri) ri = p.ri;
+      if(p.fni) fni = p.fni;
+      if(p.roti) roti = p.roti;
+      if(p.ro) ro = p.ro;
+      if(p.fno) fno = p.fno;
+    }
+    if(fni<3) fni = 3;
+    if(fno<3) fno = 3;
+    var c = _oldCircle({r:ri,fn:fni,center:true});
+    if(roti) c = c.rotateZ(roti);
+    return rotate_extrude({fn:fno},c.translate([ro,0,0]));
+  }
+  let _oldTorus = torus
+  torus = wrap(_oldTorus)
 
   let _oldSquare = square
   square = wrap(_oldSquare)
@@ -54,6 +77,9 @@ export function makeWraps(){
 
   let _oldDifference = difference
   difference = spreadWrap( _oldDifference )
+
+  let _oldIntersect = intersection
+  intersection = spreadWrap( _oldIntersect )
 
   //transforms
   let _oldTranslate = translate
@@ -82,9 +108,9 @@ export function makeWraps(){
 
 
   return {
-    cube, sphere, cylinder, 
+    cube, sphere, cylinder, torus,
     square, circle,  
-    hull, chain_hull, union, difference, 
+    hull, chain_hull, union, difference, intersection,
     translate, rotate, mirror
   }
 
