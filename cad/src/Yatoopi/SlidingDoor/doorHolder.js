@@ -1,6 +1,6 @@
 import {of, head, flatten} from 'ramda'
-import {makeParams} from '../utils'
-import {makeWraps} from '../wrappers'
+import {makeParams} from '../../utils'
+import {makeWraps} from '../../wrappers'
 
 
 export default function doorHolder(options){
@@ -18,7 +18,7 @@ export default function doorHolder(options){
     ,mountBoltDia : 3
     ,mountBoltOffsetX:12//along width
     ,mountBoltOffsetY:24
-    ,axisBoltDia  :3
+    ,axisBoltDia  :4
 
     ,frontArmLength: 20
     ,frontArmWidth: 30//width
@@ -31,7 +31,10 @@ export default function doorHolder(options){
   function addComputedParams(options){
     const armOffset = options.mountBlockThickness+options.bearingHeight+options.bearingCleareance//4 + options.bearingHeight+ options.frontArmThickness/2 
 
-    let computed   = {axisBoltHeadOd:5.7, axisBoltHeadHeight:3, armOffset}
+    let computed   = {
+      axisBoltHeadOd:7.0//5.7
+      , axisBoltHeadHeight:4//3
+      , armOffset}
     return computed
   }
 
@@ -87,7 +90,7 @@ export default function doorHolder(options){
   const fAMP4Width  = 2
   const fAMP4Thickness = 4
   const frontArmMountNotch  = cube({size:[fAMP4Width,fAMP4Length, fAMP4Thickness],center:[false, false, false]})
-    .map(translate([5,frontArmWidth/2 -fAMP1Length-fAMP4Length,-armOffset]))
+    .map(translate([4,frontArmWidth/2 -fAMP1Length-fAMP4Length,-armOffset]))
 
   const frontArmMount = union(frontArmMountP1, frontArmMountP2, frontArmMountP3)
     .map(e=>difference(e,frontArmMountNotch))
