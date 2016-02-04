@@ -50,7 +50,7 @@ const sensorReadCode = {
   }
 }
 
-
+////////////////////////////////////
 //what a user would actually specify
 const mySensors = [
   'BME280'
@@ -61,6 +61,7 @@ const myComs = [
   'rest'
 ]
 
+//not sure how to deal with sensors containing...sensors
 const mySensors2 = {
   'BME280':['temperature','humidity']
   ,'SI1145':['v']
@@ -75,6 +76,12 @@ function mkdirSync (path) {
   }
 }
 
+/* 
+  function process hash of basic options & list of "sensors" to generate correctly 
+  working firmware code for arduino/esp8266 
+
+  Note : tested and working with Olimex 8266 https://www.olimex.com/Products/IoT/MOD-WIFI-ESP8266-DEV/
+*/
 function build (sensors) {
 
   const code = sensors.map(function(sensor, sensorIndex){
