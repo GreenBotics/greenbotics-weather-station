@@ -2,7 +2,6 @@ import {of, head, flatten} from 'ramda'
 import {makeParams} from '../utils'
 import {makeWraps} from '../wrappers'
 
-
 export default function tubeCap(options){
   const {
     cube, sphere, cylinder, 
@@ -49,7 +48,5 @@ export default function tubeCap(options){
   const result = union( capTube )
     .map(r=>difference(r,capHole))
 
-
-  return flatten( result )
-  
+  return flatten( result )  
 }

@@ -10,7 +10,11 @@ import WindVane from './WindVane'
 import RainBucket from './RainBucket'
 import Anemometer from './Anemometer'
 import StephensonScreen from './StephensonScreen'
-import doorHolder from './SlidingDoor/doorHolder'
+
+import doorHolder               from './Yatoopi/SlidingDoor/doorHolder'
+import aquariumEdgeTubingHolder from './Yatoopi/aquariumEdgeTubingHolder'
+import tubeCap                  from './Yatoopi/tubeCap'
+import tubeCorner               from './Yatoopi/tubeCorner'
 
 //from http://stackoverflow.com/questions/27266550/how-to-flatten-nested-array-in-javascript
 //temporary replacement for most/ramda "flatten" until we solve the import issues
@@ -64,14 +68,17 @@ function main() {
   //let anemometer = Anemometer()
   //let stephensonScreen = StephensonScreen()
 
-  let doorHolder1 = doorHolder()
+  //let doorHolder1 = doorHolder()
+  //let aquariumEdgeTubingHolder1 = aquariumEdgeTubingHolder()
+  //let tubeCap1 = tubeCap()
+  let tubeCorner1 = tubeCorner()
 
   //return anemometer
   //return rainBucket
   //return windVane
   //return stephensonScreen
 
-  return doorHolder1
+  return tubeCorner1
 }
 
 if(typeof module !== 'undefined'){
