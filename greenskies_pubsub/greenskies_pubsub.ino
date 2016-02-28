@@ -14,6 +14,13 @@
 #include <Adafruit_BME280.h>
 
 
+
+#include <OneWire.h>
+int DS18S20_Pin = 2; //DS18S20 Signal pin on digital 20
+//Temperature chip i/o
+OneWire ds(DS18S20_Pin);
+
+
 // WiFi parameters
 bool wifiInitStarted = true;
 bool wifiInitDone    = false;
@@ -29,23 +36,27 @@ float temperature_0 = 0;
 float humidity_0 = 0;
 float baro_0 = 0;
 
+float temperature_1 = 0;
+
 
 StaticJsonBuffer<200> jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
 
+//for timeSync
+long lastTimeSync = 0;
 
-const char* mqtt_server = "192.168.1.4";
+const char* mqtt_server = "192.168.1.5";
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
-char msg[50];
+char msg[200];
 int value = 0;
 
 const char* nodeId = "0";
 //String      nodeFullName = "greenbotics-node-" + String(nodeId);
 
 void setup(void)
-{  
+{
   // Start Serial
   Serial.begin(115200);
   //configure I2C
@@ -88,14 +99,14 @@ void reconnect() {
     // Attempt to connect
     if (client.connect("greenbotics-node-0")) {
       Serial.println("connected");
-      
+
       // Once connected, publish an announcement...
       client.publish("nodeOnline", nodeId);
-      
+
       // ... and resubscribe
       client.subscribe("cmd");//command
-      client.subscribe("tSync");//time sync
-      
+      client.subscribe("timeSync");//time sync
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -112,21 +123,21 @@ void setupWifi(){
   WiFi.begin( ssid, password );
   //set static ip part
   WiFi.config(ip, gateway, subnet);
-  
+
   while (WiFi.status() != WL_CONNECTED) {
     myDelay(500);
     Serial.print(".");
   }
   Serial.println("");
   Serial.println("WiFi connected");
- 
- 
+
+
   // Print the IP address
   Serial.print(WiFi.localIP());
   Serial.print(":");
   Serial.print(LISTEN_PORT);
   Serial.println();
-  
+
   wifiInitDone = true;
 }
 
@@ -144,21 +155,28 @@ void loop(){
   }
   client.loop();
 
+  //time sync operation to keep this node in sync
+  client.publish("timeSync/req", "");
 
   //do the sensor readings
   temperature_0 = bme.readTemperature();
   humidity_0 = bme.readHumidity();
   baro_0 = bme.readPressure() / 100.0F;
+  temperature_1 = getTemp();
+
+  //Serial.print("Water temperature: ");
+  //Serial.println(temperature_1);
 
   //send out message
   //dtostrf(temperature_0, 4, 2, msg);
 
   //one way to deal with it
-  root["t"] = temperature_0;
-  root["h"] = humidity_0;
-  root["b"] = baro_0;
+  root["t_0"] = temperature_0;
+  root["t_1"] = temperature_1;
+  root["h_0"] = humidity_0;
+  root["b_0"] = baro_0;
   root.printTo(msg, sizeof(msg));
-  
+
   Serial.print("Publish message: ");
   Serial.println(msg);
   client.publish("sensorData", msg);
@@ -175,8 +193,7 @@ void loop(){
   dtostrf(baro_0, 4, 2, msg);
   client.publish("/greenbotics/foo/0/baro", msg);*/
 
-
-  myDelay(4);
+  myDelay(200);//give the system enough time to send outgoing messages
   ESP.deepSleep(60000000, WAKE_RF_DEFAULT);
 
 }
@@ -186,8 +203,56 @@ void myDelay(int ms) {
     for(i=1;i!=ms;i++) {
       delay(1);
       if(i%100 == 0) {
-        ESP.wdtFeed(); 
+        ESP.wdtFeed();
         yield();
       }
     }
+}
+
+
+float getTemp(){
+ //returns the temperature from one DS18S20 in DEG Celsius
+
+ byte data[12];
+ byte addr[8];
+
+ if ( !ds.search(addr)) {
+   //no more sensors on chain, reset search
+   ds.reset_search();
+   return -1000;
+ }
+
+ if ( OneWire::crc8( addr, 7) != addr[7]) {
+   Serial.println("CRC is not valid!");
+   return -1000;
+ }
+
+ if ( addr[0] != 0x10 && addr[0] != 0x28) {
+   Serial.print("Device is not recognized");
+   return -1000;
+ }
+
+ ds.reset();
+ ds.select(addr);
+ ds.write(0x44,1); // start conversion, with parasite power on at the end
+
+ byte present = ds.reset();
+ ds.select(addr);
+ ds.write(0xBE); // Read Scratchpad
+
+
+ for (int i = 0; i < 9; i++) { // we need 9 bytes
+  data[i] = ds.read();
+ }
+
+ ds.reset_search();
+
+ byte MSB = data[1];
+ byte LSB = data[0];
+
+ float tempRead = ((MSB << 8) | LSB); //using two's compliment
+ float TemperatureSum = tempRead / 16;
+
+ return TemperatureSum;
+
 }
