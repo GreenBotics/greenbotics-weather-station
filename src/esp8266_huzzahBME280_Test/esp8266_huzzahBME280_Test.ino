@@ -24,7 +24,7 @@ struct RPMMeasurer {
   unsigned long currentTime;
   unsigned long elapsedTime; 
 
-  RPMMeasurer():{
+  RPMMeasurer(){
     windRPM = 0;
     curState = 0;
     prevState= 0;
@@ -38,18 +38,21 @@ struct RPMMeasurer {
   int measure(int state) 
   { 
     curState = state;
+    int time_between_pulses = 10;
+    int pulses_per_rev = 1;
     
     if(curState != prevState){
       currentTime = millis();
       elapsedTime = currentTime - startTime;
-      windRPM =  60000/(time_between_pulses*pulses_per_rev)
+      windRPM =  60000/(time_between_pulses*pulses_per_rev);
 
       //reset
       prevState = state;
       startTime = millis();
       currentTime = millis();
       
-      return windRPM
+      return windRPM;
+    }
   }
 };
 
@@ -79,6 +82,7 @@ void setup() {
 
 void loop() {
     hallState = digitalRead(hallPin);
+    rpm.measure(hallState);
     
     Serial.print("Temperature = ");
     Serial.print(bme.readTemperature());
@@ -106,8 +110,8 @@ void loop() {
 
 
 
-int measureRPM(int state){
-  int windRPM = 0;
+/*int measureRPM(int state){
+    int windRPM = 0;
   int curState = 0;
   int prevState= 0;
   
@@ -115,11 +119,8 @@ int measureRPM(int state){
   unsigned long currentTime = millis();
   unsigned long elapsedTime = 0; 
 
-  /*
-   * 60000/(time_between_pulses*pulses_per_rev)
-  (pulse_count/pulses_per_rev)*60
-  */
-  /*
+
+
   int inner(int state){
     curState = state;
     
@@ -133,12 +134,6 @@ int measureRPM(int state){
       currentTime = millis();
       return windRPM
     }
-  }*/
-  //return [=](int state) mutable { return 42; };
-  //auto printlnB = [](const char  *message){ cout << message << std::endl;};
-  /*return [=]() mutable {
-      //cout << c++;
-  };*/
-
-}
+  }
+}*/
 
