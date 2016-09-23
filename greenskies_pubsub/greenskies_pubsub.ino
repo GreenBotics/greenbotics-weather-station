@@ -45,7 +45,7 @@ JsonObject& root = jsonBuffer.createObject();
 //for timeSync
 long lastTimeSync = 0;
 
-const char* mqtt_server = "192.168.1.5";
+const char* mqtt_server = "192.168.1.23";
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
