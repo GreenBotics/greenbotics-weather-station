@@ -1,86 +1,110 @@
 #include <ESP8266WiFi.h>
-#include <EEPROM.h>
+#include "configuration.h"
 
 #include <Wire.h>
 #include <SPI.h>
+#include <Adafruit_BME280.h>
 #include <Adafruit_Sensor.h>
 
-#include <ArduinoJson.h>
-#include <PubSubClient.h>
-
-#include "configuration.h"
-
-#include <Adafruit_BME280.h>
-
-
-
 #include <OneWire.h>
+
+//setup sensors / pins
 int DS18S20_Pin = 2; //DS18S20 Signal pin on digital 20
-//Temperature chip i/o
-OneWire ds(DS18S20_Pin);
+int depthTriggerPin = 5;
+int depthEchoPin = 4;
 
-
-// WiFi parameters
-bool wifiInitStarted = true;
-bool wifiInitDone    = false;
-bool ssidInitialized = false;
-bool passwordInitialized = false;
 
 //sensors init
 Adafruit_BME280 bme; // I2C
 
+//Temperature chip i/o
+OneWire ds(DS18S20_Pin);
 
 //sensors data
 float temperature_0 = 0;
 float humidity_0 = 0;
 float baro_0 = 0;
 
-float temperature_1 = 0;
-
+float temperature_1 = 0; // water temperature
 float waterDepth_0 = 0;
 
 
+//other setup
+#include <ArduinoJson.h>
 StaticJsonBuffer<200> jsonBuffer;
 JsonObject& root = jsonBuffer.createObject();
+long lastMsg = 0;
+char msg[400];
+
+//mqtt setup
+#include <PubSubClient.h>
+WiFiClient espClient;
+PubSubClient mqtt(espClient);
+
+/*#include <EEPROM.h>
+#include "myDelay.h"
+
+// WiFi parameters
+bool wifiInitDone    = false;
+bool ssidInitialized = false;
+bool passwordInitialized = false;
 
 //for timeSync
 long lastTimeSync = 0;
 
-const char* mqtt_server = "192.168.1.23";
-WiFiClient espClient;
-PubSubClient client(espClient);
 long lastMsg = 0;
-char msg[200];
+char msg[400];
 int value = 0;
 
-const char* nodeId = "0";
-//String      nodeFullName = "greenbotics-node-" + String(nodeId);
+//String      nodeFullName = "greenbotics-node-" + String(nodeId);*/
 
-int distanceTriggerPin = 1;
-int distanceEchoPin = 3;
+#include "setupWifi.h"
+
+#include "readDepth.h"
+#include "readTemp.h"
 
 void setup(void)
 {
   // Start Serial
+  /*
+  //USE_SERIAL.setDebugOutput(true);
+  USE_SERIAL.println();
+  USE_SERIAL.println();
+  USE_SERIAL.println();
+  for(uint8_t t = 4; t > 0; t--) {
+      USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+      USE_SERIAL.flush();
+      delay(1000);
+  }*/
+  
   Serial.begin(115200);
+  Serial.println('Node started');
+
+  setupWifi();
+
+
   //configure I2C
   Wire.pins(13,14);
-
   //configure communications
   // Give name and ID to device
-
   while( !bme.begin() ) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    myDelay(1000);
+    delay(1000);
   }
 
-  pinMode(distanceTriggerPin, OUTPUT);
-  pinMode(distanceEchoPin, INPUT);
+  pinMode(depthTriggerPin, OUTPUT);
+  pinMode(depthEchoPin, INPUT);
 
+  //setup message package
   root["nodeId"]= nodeId;
 
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+  //setup mqtt
+  mqtt.setServer(mqtt_server, 1883);
+  mqtt.setCallback(callback);
+  /*if(! wifiInitDone){
+    wifiInitDone = setupWifi();
+  }*/
+  //
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -94,29 +118,28 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Switch on the LED if an 1 was received as first character
   if ((char)payload[0] == '1') {
-
   }
-
 }
 
 void reconnect() {
   // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
+  while (!mqtt.connected()) {
+    Serial.print("Attempting MQTT connection to ");
+    Serial.print(mqtt_server);
     // Attempt to connect
-    if (client.connect("greenbotics-node-0")) {
+    if (mqtt.connect("greenbotics-node-0")) {
       Serial.println("connected");
 
       // Once connected, publish an announcement...
-      client.publish("nodeOnline", nodeId);
+      mqtt.publish("nodeOnline", nodeId);
 
       // ... and resubscribe
-      client.subscribe("cmd");//command
-      client.subscribe("timeSync");//time sync
+      mqtt.subscribe("cmd");//command
+      mqtt.subscribe("timeSync");//time sync
 
     } else {
       Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.print(mqtt.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
@@ -124,54 +147,30 @@ void reconnect() {
   }
 }
 
-
-void setupWifi(){
-  // Connect to WiFi
-  WiFi.begin( ssid, password );
-  //set static ip part
-  WiFi.config(ip, gateway, subnet);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    myDelay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-
-  // Print the IP address
-  Serial.print(WiFi.localIP());
-  Serial.print(":");
-  Serial.print(LISTEN_PORT);
-  Serial.println();
-
-  wifiInitDone = true;
-}
-
-
-
 void loop(){
-  myDelay(1);
-  if(wifiInitStarted && ! wifiInitDone){
-    setupWifi();
-    wifiInitDone = true;
-  }
 
-   if (!client.connected()) {
+  if (!mqtt.connected()) {
     reconnect();
   }
-  client.loop();
-
-  //time sync operation to keep this node in sync
-  client.publish("timeSync/req", "");
+  mqtt.loop();
 
   //do the sensor readings
   temperature_0 = bme.readTemperature();
   humidity_0 = bme.readHumidity();
   baro_0 = bme.readPressure() / 100.0F;
-  temperature_1 = getTemp();
-  waterDepth_0 = measureDepth(distanceTriggerPin, distanceEchoPin);
 
+  //water temperature
+  temperature_1 = readTemp(ds);
+
+  //water depth
+  waterDepth_0 = readDepth(depthTriggerPin, depthEchoPin);
+
+  //time sync operation to keep this node in sync
+  /*mqtt.publish("timeSync/req", "");
+  */
+
+  //Serial.print("Depth");
+  //Serial.println(waterDepth_0);
   //Serial.print("Water temperature: ");
   //Serial.println(temperature_1);
 
@@ -183,11 +182,12 @@ void loop(){
   root["t_1"] = temperature_1;
   root["h_0"] = humidity_0;
   root["b_0"] = baro_0;
+  root["wd_0"] = waterDepth_0;
   root.printTo(msg, sizeof(msg));
 
-  Serial.print("Publish message: ");
-  Serial.println(msg);
-  client.publish("sensorData", msg);
+  //Serial.print("Publish message: ");
+  //Serial.println(msg);
+  mqtt.publish("sensorData", msg);
 
   /*other way: less boilerplate, but less practical on the recieving end, requires
   changes when topology of network changes ? or we could use something
@@ -195,87 +195,12 @@ void loop(){
   */
   /*
   dtostrf(temperature_0, 4, 2, msg);
-  client.publish("/greenbotics/foo/0/temperature", msg);
+  mqtt.publish("/greenbotics/foo/0/temperature", msg);
   dtostrf(humidity_0, 4, 2, msg);
-  client.publish("/greenbotics/foo/0/humidity", msg);
+  mqtt.publish("/greenbotics/foo/0/humidity", msg);
   dtostrf(baro_0, 4, 2, msg);
-  client.publish("/greenbotics/foo/0/baro", msg);*/
-
-  myDelay(200);//give the system enough time to send outgoing messages
-  ESP.deepSleep(60000000, WAKE_RF_DEFAULT);
-
+  mqtt.publish("/greenbotics/foo/0/baro", msg);*/
+  delay(2000);//give the system enough time to send outgoing messages
+  // deepSleep time is defined in microseconds. Multiply seconds by 1e6 see https://learn.sparkfun.com/tutorials/esp8266-thing-hookup-guide/example-sketch-goodnight-thing-sleep-mode
+  ESP.deepSleep(sleepTimeS * 1000000, WAKE_RF_DEFAULT);
 }
-
-void myDelay(int ms) {
-    int i;
-    for(i=1;i!=ms;i++) {
-      delay(1);
-      if(i%100 == 0) {
-        ESP.wdtFeed();
-        yield();
-      }
-    }
-}
-
-
-float getTemp(){
- //returns the temperature from one DS18S20 in DEG Celsius
-
- byte data[12];
- byte addr[8];
-
- if ( !ds.search(addr)) {
-   //no more sensors on chain, reset search
-   ds.reset_search();
-   return -1000;
- }
-
- if ( OneWire::crc8( addr, 7) != addr[7]) {
-   Serial.println("CRC is not valid!");
-   return -1000;
- }
-
- if ( addr[0] != 0x10 && addr[0] != 0x28) {
-   Serial.print("Device is not recognized");
-   return -1000;
- }
-
- ds.reset();
- ds.select(addr);
- ds.write(0x44,1); // start conversion, with parasite power on at the end
-
- byte present = ds.reset();
- ds.select(addr);
- ds.write(0xBE); // Read Scratchpad
-
-
- for (int i = 0; i < 9; i++) { // we need 9 bytes
-  data[i] = ds.read();
- }
-
- ds.reset_search();
-
- byte MSB = data[1];
- byte LSB = data[0];
-
- float tempRead = ((MSB << 8) | LSB); //using two's compliment
- float TemperatureSum = tempRead / 16;
-
- return TemperatureSum;
-}
-
-float measureDepth(int triggerPin, int echoPin){
-  
-  long duration, distance;
-  digitalWrite(triggerPin, LOW);  
-  delayMicroseconds(2); 
-  
-  digitalWrite(triggerPin, HIGH);
-  delayMicroseconds(10); 
-  
-  digitalWrite(triggerPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
-  distance = (duration/2) / 29.1;
-  return distance;
-}
-
